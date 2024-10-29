@@ -1,0 +1,42 @@
+The document presents a financial position statement summarizing the profitability of a company from 2021 to projected figures for 2024. Here are the key points:
+
+### Summary:
+
+1. **Local Sales Growth**:
+   - There is a steady increase in local sales from 6,354.50 in 2021 to a projected 13,750.00 in 2024.
+
+2. **Cost of Sales**:
+   - The cost of sales has also increased from 4,990.30 in 2021 to a projected 10,313.25 in 2024, indicating a proportional rise with sales.
+
+3. **Gross Profit**:
+   - Gross profit has risen from 1,364.20 in 2021 to an anticipated 3,436.75 in 2024. The gross profit ratio improved from 21.47% to a projected 24.99%.
+
+4. **Net Income**:
+   - Net income shows an increasing trend from 1,381.06 in 2021 to a projected 3,464.30 in 2024. The net profit ratio has increased from 3.30% in 2021 to a projected 3.93% in 2024.
+
+5. **Expenses Overview**:
+   - Other expenses have risen significantly, moving from 872.38 in 2021 to projected 2,408.25 in 2024. A slight decrease in the proportion of other expenses relative to sales is noted from 13.73% in 2021 to an estimated 17.51% in 2024.
+   - Bank interest and interest to partners are relatively low compared to net income but indicate some financial cost management.
+
+6. **Profitability Metrics**:
+   - PBDT (Profit Before Depreciation and Tax) shows a positive trend, growing from 437.31 in 2021 to a projected 925.18 in 2024.
+
+### Key Ratios:
+- **Gross Profit Ratio**:
+  - 2021: 21.47%
+  - 2024 (Projected): 24.99%
+  
+- **Net Profit Ratio**:
+  - 2021: 3.30%
+  - 2024 (Projected): 3.93%
+  
+- **Cost of Sales to Sales Ratio**:
+  - 2021: 78.53%
+  - 2024 (Projected): 75.01%
+
+- **Other Expenses to Sales Ratio**:
+  - 2021: 13.73%
+  - 2024 (Projected): 17.51%
+
+### Conclusion:
+The financial statement indicates strong growth in sales and profitability from 2021 to 2024. Although costs, particularly other expenses, are increasing, the company is effectively managing its profit margins, as evidenced by improving gross and net profit ratios. The future projections suggest a positive outlook for profitability.
