@@ -1,143 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
-        crossorigin="anonymous"></script>
-    <style>
-        .flex {
-            display: flex;
-        }
-
-        .justify-Center {
-            justify-content: center;
-        }
-
-        .justify-space-btn {
-            justify-content: space-between;
-        }
-
-        .p-60 {
-            padding: 60px;
-        }
-
-        .pl-60 {
-            padding-bottom: 60px;
-        }
-
-        .ml-10 {
-            margin-left: 10px;
-        }
-          .dropdown-menu {
-            max-height: 220px; /* Set the maximum height */
-            /* overflow-y: auto;  Enable vertical scrolling */
-            overflow: auto; 
-        }
-    </style>
+    <title>Business Credit Automation</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
-
 <body>
-    <div class="flex justify-Center p-60">
-        <div>
-            <img src="./assets/images/WebSiteImg_2019-11-28.png" alt="">
-        </div>
-    </div>
-    <div class="flex justify-Center pl-60">
-        <h3>
-            CREDIT DEPARTMENT: BUSINESS LOAN
-        </h3>
-    </div>
-    <div class="flex justify-Center pl-60">
-        <div>
-            <div class="input-group mb-3">
-                <input type="file" class="form-control" id="inputGroupFile01">
+    <div class="container mt-5">
+        <!-- Logo -->
+        <div class="row justify-content-center mb-4">
+            <div class="col-auto">
+                <img src="/static/images/logo.png" alt="Logo" class="img-fluid" id="logo">
             </div>
         </div>
 
-        <!-- <div>
-            <div class="input-group mb-3">
-                <label class="input-group-text" for="inputGroupFile01">Upload</label>
-                <input type="file" class="form-control" id="inputGroupFile01">
+        <!-- File Upload Form -->
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <form id="uploadForm" action="/api/process_pdf" method="post" enctype="multipart/form-data">
+                    <div class="input-group mb-3">
+                        <input type="file" class="form-control" id="pdf_file" name="pdf_file" required>
+                        <div class="input-group-append">
+                            <button class="btn btn-primary" type="submit">Submit</button>
+                        </div>
+                    </div>
+                </form>
             </div>
-        </div> -->
-    </div>
-    <!-- <div class="flex justify-Center ">
-        <div class="dropdown">
-            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"
-                aria-expanded="false">
-                Select Analysis
-            </button>
-            <ul class="dropdown-menu">
-                <li><button class="dropdown-item" type="button">Financial Position Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Balance sheet Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Key Ratio Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Asset Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Liability Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Working Capital Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Appraisal Note</button></li>
-
-            </ul>
         </div>
-    </div> -->
-    <div class="flex justify-Center ">
-        <div class="btn-group">
-            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                Select Analysis
-            </button>
-            <ul class="dropdown-menu">
-                <li><button class="dropdown-item" type="button">Financial Position Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Balance sheet Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Key Ratio Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Asset Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Liability Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Working Capital Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Appraisal Note</button></li>
-            </ul>
+
+        <!-- Loading Spinner -->
+        <div class="row justify-content-center" id="loadingSpinnerContainer">
+            <div class="col-auto">
+                <div id="loadingSpinner" class="spinner-border text-primary" style="display: none;" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Response Area -->
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div id="response" class="mt-5" style="display: none;"></div>
+            </div>
         </div>
     </div>
-  
-    <!-- <div class="flex justify-Center">
-        <div class="dropdown">
-            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"
-                aria-expanded="false">
-                Dropdown
-            </button>
-            <ul class="dropdown-menu" data-popper-placement="bottom-start">
-                <li><button class="dropdown-item" type="button">Financial Position Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Financial Position Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Financial Position Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Financial Position Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Financial Position Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Financial Position Analysis</button></li>
-                <li><button class="dropdown-item" type="button">Financial Position Analysis</button></li>
-            </ul>
-        </div>
-    </div> -->
 
-    <!-- <div class="flex justify-Center mb-4">
-        <div class="flex justify-space-btn">
-            <button type="button" class="btn btn-secondary ">Financial Position Analysis</button>
-            <button type="button" class="btn btn-secondary ml-10">Balance sheet Analysis</button>
-            <button type="button" class="btn btn-secondary ml-10">Key Ratio Analysis</button>
-        </div>
-
-    </div>
-    <div class="flex justify-Center">
-        <div class="flex">
-            <button type="button" class="btn btn-secondary">Asset Analysis</button>
-            <button type="button" class="btn btn-secondary ml-10">Liability Analysis</button>
-            <button type="button" class="btn btn-secondary ml-10">Working Capital Analysis</button>
-        </div>
-    </div> -->
-
-    <script src="./assets/js/app.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/showdown@1.9.1/dist/showdown.min.js"></script>
+    <script src="/static/js/app.js"></script>
 </body>
-
 </html>
