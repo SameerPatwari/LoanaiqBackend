@@ -1,4 +1,7 @@
 import fitz  # PyMuPDF
+import pytesseract
+from PIL import Image
+from io import BytesIO
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
@@ -8,17 +11,32 @@ client = OpenAI()
 
 def extract_text_from_pdf(pdf_path):
     """
-    Extracts text from a PDF file using PyMuPDF.
+    Extracts text from a PDF file using PyMuPDF and applies OCR on images within the PDF.
     """
-    text = ""
-    try:
-        with fitz.open(pdf_path) as pdf:
-            for page_num in range(len(pdf)):
-                page = pdf[page_num]
-                text += page.get_text("text")
-    except Exception as e:
-        raise ValueError(f"Error extracting text from PDF: {str(e)}")
-    return text
+    full_text = ""
+
+    # Open the PDF file
+    with fitz.open(pdf_path) as pdf:
+        for page_num in range(len(pdf)):
+            page = pdf[page_num]
+
+            # Extract pure text from the page
+            text = page.get_text("text")
+            if text:
+                full_text += text
+
+            # Extract images and apply OCR
+            for img in page.get_images(full=True):
+                xref = img[0]
+                base_image = pdf.extract_image(xref)
+                image_bytes = base_image["image"]
+                img = Image.open(BytesIO(image_bytes))
+
+                # Apply OCR on the image to extract text
+                text = pytesseract.image_to_string(img)
+                full_text += text
+
+    return full_text
 
 def send_prompt_to_gpt(prompt, extracted_text):
     """
@@ -41,7 +59,7 @@ def save_response_to_file(response_text, output_path="gpt_response.txt"):
     Saves the GPT response to a text file.
     """
     try:
-        with open(output_path, "w") as file:
+        with open(output_path, "w", encoding="utf-8") as file:
             file.write(response_text)
     except Exception as e:
         raise ValueError(f"Error saving response to file: {str(e)}")
