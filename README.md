@@ -1,7 +1,7 @@
 ## Hi there 👋
 
 1) Open terminal/cmd and move to the folder where you want to clone this project.
-2) Then run the following command
+2) Then run the following command.
    ```
    git clone https://github.com/loanaiq/loanaiq.git
    ```
