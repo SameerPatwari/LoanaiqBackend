@@ -46,8 +46,14 @@ def send_prompt_to_gpt(prompt, extracted_text):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a financial analysis assistant specializing in summarizing and extracting insights from PDF documents."},
-                    {"role": "user", "content": f"{prompt}\n\nThe extracted content from the financial document is as follows:\n{extracted_text}"}
+                    {"role": "system", 
+                     "content": "You are an assistant that only responds based on the provided content from a document. "
+                                "Your response must be grounded entirely in the content of the document provided. "
+                                "If the answer is not explicitly in the document, you should say: 'The information required to answer this question is not present in the document.'"
+                    },
+                    {"role": "user", 
+                     "content": f"{prompt}\n\nThe content from the document is as follows:\n{extracted_text}"
+                    }
                 ]
         )
         return response.choices[0].message.content
