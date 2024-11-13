@@ -75,5 +75,28 @@ def process_pdf_and_record_response(pdf_path, prompt, output_path="gpt_response.
     Full process of extracting text from PDF, sending it to GPT, and saving the response.
     """
     extracted_text = extract_text_from_pdf(pdf_path)
-    response = send_prompt_to_gpt(prompt, extracted_text)
+
+    #refined_text = refine_extracted_text(extracted_text) # add this if necessary
+
+    response = send_prompt_to_gpt(prompt, extracted_text) # response = send_prompt_to_gpt(prompt, refined_text) # replace with this if necessary
+
     save_response_to_file(response, output_path)
+
+#def refine_extracted_text(extracted_text):
+#    """
+#    Sends extracted text to GPT API for refinement to eliminate unwanted symbols
+#    and make it more readable.
+#    """
+#    try:
+#        response = client.chat.completions.create(
+#            model="gpt-4o-mini",
+#            messages=[
+#                {"role": "system", 
+#                 "content": "You are an assistant that refines OCR text by removing unreadable characters and symbols. "
+#                            "Make the text more readable while preserving all numerical values, dates, and financial terms."},
+#                {"role": "user", "content": extracted_text}
+#            ]
+#        )
+#        return response.choices[0].message.content
+#    except Exception as e:
+#        raise ValueError(f"Error communicating with GPT API for text refinement: {str(e)}")

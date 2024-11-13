@@ -38,7 +38,7 @@ def process_pdf():
         process_pdf_and_record_response(file_path, prompt, output_path)
 
         # Read the GPT response from the file and return it
-        with open(output_path, 'r') as file:
+        with open(output_path, 'r', encoding='utf-8') as file:
             response_text = file.read()
 
         return jsonify({"response": response_text})
