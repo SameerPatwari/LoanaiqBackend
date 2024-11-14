@@ -11,7 +11,7 @@ client = OpenAI()
 
 def extract_text_from_pdf(pdf_path):
     """
-    Extracts text from a PDF file using PyMuPDF and applies OCR on images within the PDF.
+    Extracts text from a PDF file using PyMuPDF and applies OCR on images within the PDF. Includes section markers for better referencing.
     """
     full_text = ""
 
@@ -19,6 +19,9 @@ def extract_text_from_pdf(pdf_path):
     with fitz.open(pdf_path) as pdf:
         for page_num in range(len(pdf)):
             page = pdf[page_num]
+
+            # Mark the start of each page for reference
+            full_text += f"\n--- Page {page_num + 1} ---\n"
 
             # Extract pure text from the page
             text = page.get_text("text")
@@ -40,19 +43,19 @@ def extract_text_from_pdf(pdf_path):
 
 def send_prompt_to_gpt(prompt, extracted_text):
     """
-    Sends the extracted text and a prompt to the GPT API and returns the response.
+    Sends the combined text and a prompt to the GPT API and returns the response.
     """
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
                 messages=[
                     {"role": "system", 
-                     "content": "You are an assistant that only responds based on the provided content from a document. "
-                                "Your response must be grounded entirely in the content of the document provided. "
-                                "If the answer is not explicitly in the document, you should say: 'The information required to answer this question is not present in the document.'"
+                     "content": "You are an assistant that responds based on content provided from multiple documents. "
+                                "Respond based on the document sections referenced in the prompt. If information is missing, "
+                                "say: 'The information required to answer this question is not present in the document.'"
                     },
                     {"role": "user", 
-                     "content": f"{prompt}\n\nThe content from the document is as follows:\n{extracted_text}"
+                     "content": f"{prompt}\n\nThe content from the documents is as follows:\n{extracted_text}"
                     }
                 ]
         )
@@ -70,16 +73,22 @@ def save_response_to_file(response_text, output_path="gpt_response.txt"):
     except Exception as e:
         raise ValueError(f"Error saving response to file: {str(e)}")
 
-def process_pdf_and_record_response(pdf_path, prompt, output_path="gpt_response.txt"):
+def process_multiple_pdfs_and_record_response(pdf_paths, prompt, output_path="gpt_response.txt"):
     """
-    Full process of extracting text from PDF, sending it to GPT, and saving the response.
+    Extracts text from multiple PDFs, combines the text, sends it to GPT, and saves the response.
     """
-    extracted_text = extract_text_from_pdf(pdf_path)
-
-    #refined_text = refine_extracted_text(extracted_text) # add this if necessary
-
-    response = send_prompt_to_gpt(prompt, extracted_text) # response = send_prompt_to_gpt(prompt, refined_text) # replace with this if necessary
-
+    combined_text = ""
+    
+    # Extract text from each PDF and combine with file-specific markers
+    for pdf_path in pdf_paths:
+        filename = os.path.basename(pdf_path)
+        extracted_text = extract_text_from_pdf(pdf_path)
+        combined_text += f"\n\n--- Start of {filename} ---\n{extracted_text}\n--- End of {filename} ---\n"
+    
+    # Send combined text to GPT with the prompt
+    response = send_prompt_to_gpt(prompt, combined_text)
+    
+    # Save the response to a text file
     save_response_to_file(response, output_path)
 
 #def refine_extracted_text(extracted_text):
