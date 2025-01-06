@@ -39,6 +39,7 @@ def extract_text_from_pdf(pdf_path):
                 text = pytesseract.image_to_string(img)
                 full_text += text
 
+    print(full_text)
     return full_text
 
 def send_prompt_to_gpt(prompt, extracted_text):
@@ -57,8 +58,9 @@ def send_prompt_to_gpt(prompt, extracted_text):
                     {"role": "user", 
                      "content": f"{prompt}\n\nThe content from the documents is as follows:\n{extracted_text}"
                     }
-                ]
-        )
+                ],
+                top_p=.0000000000000000000001
+            )
         return response.choices[0].message.content
     except Exception as e:
         raise ValueError(f"Error communicating with GPT API: {str(e)}")

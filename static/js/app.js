@@ -20,13 +20,32 @@ $(document).ready(function () {
             success: function (response) {
                 // Hide the loading spinner
                 $('#loadingSpinner').hide();
-                
-                // Convert Markdown response to HTML
-                var converter = new showdown.Converter();
-                var html = converter.makeHtml(response.response);
 
-                // Display the response and make it visible
-                $('#response').html(html).show();
+                let rawResponse = response.response; // Raw response from the API
+
+                // Preprocess the response to wrap LaTeX formulas correctly
+                let processedResponse = rawResponse.replace(
+                    /\\\$\$([\s\S]*?)\\\$\$/g, // Match escaped formulas \$$ ... \$$
+                    (match, formula) => `$$${formula.trim()}$$` // Replace with valid MathJax formula
+                );
+
+                // Convert Markdown to HTML
+                var converter = new showdown.Converter({
+                    tables: true, // Enable Markdown table support
+                });
+                var htmlContent = converter.makeHtml(processedResponse);
+
+                // Display the formatted response
+                $('#response').html(htmlContent).show();
+
+                // Render MathJax for formulas after content is rendered
+                if (window.MathJax) {
+                    MathJax.typesetPromise([document.getElementById('response')]).then(function () {
+                        console.log("MathJax formulas are rendered");
+                    }).catch(function (err) {
+                        console.error("MathJax rendering error:", err);
+                    });
+                }
             },
             error: function (xhr, status, error) {
                 $('#loadingSpinner').hide();
