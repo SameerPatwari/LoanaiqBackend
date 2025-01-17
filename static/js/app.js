@@ -1,56 +1,74 @@
 $(document).ready(function () {
-    $('#uploadForm').on('submit', function (e) {
-        e.preventDefault();
+    let currentPrompt = ""; // Store the dynamically selected prompt
 
-        // Show the loading spinner and hide the response section
-        $('#loadingSpinner').show();
-        $('#response').hide();
+    // Button click handlers for dynamic prompts
+    $('#btnFinancialPosition').click(function () {
+        currentPrompt = `
+            You are an AI financial analyst...
+            // Include the Financial Position prompt details here
+        `;
+        $('#btnFinancialPosition').addClass('btn-primary').removeClass('btn-secondary');
+        $('.btn-secondary').not(this).removeClass('btn-primary').addClass('btn-secondary');
+    });
 
-        let formData = new FormData(this);
+    // Analyze Button
+    $('#analyzeBtn').click(function () {
+        const csvFile = $('#csvFile')[0].files[0];
+        const borrowerProfile = $('#borrowerProfile')[0].files[0];
 
-        // Append the default prompt to the form data
-        formData.append('prompt', 'summarize this document');
+        if (!csvFile || !borrowerProfile) {
+            alert("Please upload both files before analyzing.");
+            return;
+        }
 
+        // Show loading bar
+        $('#loading').show();
+
+        const formData = new FormData();
+        formData.append('csv_file', csvFile);
+        formData.append('borrower_profile', borrowerProfile);
+        formData.append('prompt', currentPrompt);
+
+        // Send data to backend for analysis
         $.ajax({
-            url: '/api/process_pdf',
+            url: '/api/analyze',
             type: 'POST',
             data: formData,
             processData: false,
             contentType: false,
             success: function (response) {
-                // Hide the loading spinner
-                $('#loadingSpinner').hide();
+                // Format the response text to remove unwanted symbols and add line breaks
+                let formattedResponse = formatResponse(response.response);
+                $('#response').html(formattedResponse).show();
 
-                let rawResponse = response.response; // Raw response from the API
-
-                // Preprocess the response to wrap LaTeX formulas correctly
-                let processedResponse = rawResponse.replace(
-                    /\\\$\$([\s\S]*?)\\\$\$/g, // Match escaped formulas \$$ ... \$$
-                    (match, formula) => `$$${formula.trim()}$$` // Replace with valid MathJax formula
-                );
-
-                // Convert Markdown to HTML
-                var converter = new showdown.Converter({
-                    tables: true, // Enable Markdown table support
-                });
-                var htmlContent = converter.makeHtml(processedResponse);
-
-                // Display the formatted response
-                $('#response').html(htmlContent).show();
-
-                // Render MathJax for formulas after content is rendered
-                if (window.MathJax) {
-                    MathJax.typesetPromise([document.getElementById('response')]).then(function () {
-                        console.log("MathJax formulas are rendered");
-                    }).catch(function (err) {
-                        console.error("MathJax rendering error:", err);
-                    });
-                }
+                // Hide loading bar
+                $('#loading').hide();
             },
             error: function (xhr, status, error) {
-                $('#loadingSpinner').hide();
-                $('#response').html('<h3>Error:</h3><p>' + xhr.responseJSON.error + '</p>').show();
+                alert("Error: " + xhr.responseJSON.error);
+
+                // Hide loading bar if error occurs
+                $('#loading').hide();
             }
         });
     });
+
+    // Generate Document Button
+    $('#generateDocBtn').click(function () {
+        window.location.href = '/api/download';
+    });
+
+    // Function to format the response into proper paragraph format
+    function formatResponse(responseText) {
+        // Remove unwanted symbols like "*" and "#" and extra newlines
+        let formattedText = responseText.replace(/[*#]/g, '').trim();
+
+        // Split the text into paragraphs by detecting multiple newlines
+        let paragraphs = formattedText.split('\n\n');
+
+        // Join the paragraphs with <p> tags for HTML rendering
+        let htmlFormattedResponse = paragraphs.map(paragraph => `<p>${paragraph.trim()}</p>`).join('');
+        
+        return htmlFormattedResponse;
+    }
 });

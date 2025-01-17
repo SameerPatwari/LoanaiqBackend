@@ -3,70 +3,101 @@ from docx import Document
 from docx.shared import Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
+import re
 
-# Load CSV into DataFrame
-csv_file = 'statement_of_profitability.csv'
-df = pd.read_csv(csv_file)
+def format_response(response_text):
+    """
+    Cleans and formats text by removing unwanted symbols and extra newlines
+    to prepare it for inclusion in a templated PDF document.
+    
+    Args:
+        response_text (str): The raw text to clean and format.
+    
+    Returns:
+        str: The cleaned and formatted text.
+    """
+    # Remove unwanted symbols like "*" and "#"
+    cleaned_text = re.sub(r'[*#]', '', response_text).strip()
 
-# Create a new Document
-doc = Document()
+    # Split the text into logical paragraphs by detecting multiple newlines
+    paragraphs = re.split(r'\n\s*\n', cleaned_text)
 
-# Add header
-header = doc.sections[0].header
-header_table = header.add_table(rows=1, cols=2, width=Inches(6))
-header_table.autofit = False
+    # Combine the paragraphs into a single formatted string
+    formatted_text = '\n\n'.join(paragraph.strip() for paragraph in paragraphs)
 
-# Set column widths
-header_table.columns[0].width = Inches(2)
-header_table.columns[1].width = Inches(4)
+    return formatted_text
 
-# Add logo
-logo_cell = header_table.cell(0, 0)
-logo_run = logo_cell.paragraphs[0].add_run()
-logo_run.add_picture('static/images/logo.png', width=Inches(1.5))
-logo_cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
+def generate_document():
+    """
+    Generates a Word document combining CSV data and GPT response.
+    """
+    try:
+        # Load CSV into DataFrame
+        csv_file = 'statement_of_profitability.csv'
+        df = pd.read_csv(csv_file)
 
-# Add business name and details to the right
-text_cell = header_table.cell(0, 1)
-text_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
-text = text_cell.paragraphs[0].add_run("JANAKALYAN SAHAKARI BANK LTD.\nCredit Department\nNote To BLSC")
-text.bold = True
-text_cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
+        # Create a new Document
+        doc = Document()
 
-# Add table to the document
-doc.add_paragraph("\nFinancial Position: (in lakhs)", style='Heading1')
+        # Add header
+        header = doc.sections[0].header
+        header_table = header.add_table(rows=1, cols=2, width=Inches(6))
+        header_table.autofit = False
 
-table = doc.add_table(rows=1, cols=len(df.columns))
-table.style = 'Table Grid'
+        # Set column widths
+        header_table.columns[0].width = Inches(2)
+        header_table.columns[1].width = Inches(4)
 
-# Add column headers
-hdr_cells = table.rows[0].cells
-for idx, column in enumerate(df.columns):
-    hdr_cells[idx].text = column
+        # Add logo
+        logo_cell = header_table.cell(0, 0)
+        logo_run = logo_cell.paragraphs[0].add_run()
+        logo_run.add_picture('static/images/logo.png', width=Inches(1.5))
+        logo_cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-# Add rows to the table
-for index, row in df.iterrows():
-    row_cells = table.add_row().cells
-    for idx, value in enumerate(row):
-        row_cells[idx].text = f'{value}'
+        # Add business name and details to the right
+        text_cell = header_table.cell(0, 1)
+        text_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        text = text_cell.paragraphs[0].add_run("JANAKALYAN SAHAKARI BANK LTD.\nCredit Department\nNote To BLSC")
+        text.bold = True
+        text_cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-# Add text from the text file
-with open('uploads/gpt_response.txt', 'r') as file:
-    text_content = file.read()
+        # Add table to the document
+        doc.add_paragraph("\nFinancial Position: (in lakhs)", style='Heading1')
 
-doc.add_paragraph("\n" + text_content)
+        table = doc.add_table(rows=1, cols=len(df.columns))
+        table.style = 'Table Grid'
 
-# Add footer with separation line and page number
-footer = doc.sections[0].footer
-footer_paragraph = footer.paragraphs[0]
-footer_paragraph.add_run("___________________________________").add_break()
-footer_paragraph = footer.add_paragraph()
-footer_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        # Add column headers
+        hdr_cells = table.rows[0].cells
+        for idx, column in enumerate(df.columns):
+            hdr_cells[idx].text = column
 
-pager = footer_paragraph.add_run()
-field_code = OxmlElement('w:fldSimple')
-field_code.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}instr', 'PAGE')
-pager._element.append(field_code)
+        # Add rows to the table
+        for index, row in df.iterrows():
+            row_cells = table.add_row().cells
+            for idx, value in enumerate(row):
+                row_cells[idx].text = f'{value}'
 
-# Save the document
-doc.save('output.docx')
+        # Add text from the GPT response file
+        with open('uploads/gpt_response.txt', 'r') as file:
+            text_content = file.read()
+            formatted_response = format_response(text_content)
+        doc.add_paragraph("\n" + formatted_response)
+
+        # Add footer with separation line and page number
+        footer = doc.sections[0].footer
+        footer_paragraph = footer.paragraphs[0]
+        footer_paragraph.add_run("___________________________________").add_break()
+        footer_paragraph = footer.add_paragraph()
+        footer_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        pager = footer_paragraph.add_run()
+        field_code = OxmlElement('w:fldSimple')
+        field_code.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}instr', 'PAGE')
+        pager._element.append(field_code)
+
+        # Save the document
+        doc.save('output.docx')
+        print("Document generated successfully.")
+    except Exception as e:
+        print(f"Error generating document: {str(e)}")

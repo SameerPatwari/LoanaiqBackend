@@ -60,3 +60,15 @@ table th {
 table tr:nth-child(even) {
     background-color: #f9f9f9;
 }
+#loading {
+    display: none;
+}
+
+.progress-bar {
+    background-color: #007bff;
+}
+#spinner{
+    margin-left: 190px;
+    margin-top: 50px;
+}
+
