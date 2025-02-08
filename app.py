@@ -149,10 +149,10 @@ def generate_document(user_data, response_text, user_id):
     # Set narrow margins (0.5 inch on all sides)
     sections = doc.sections
     for section in sections:
-        section.left_margin = Inches(0.5)
-        section.right_margin = Inches(0.5)
-        section.top_margin = Inches(0.5)
-        section.bottom_margin = Inches(0.5)
+        section.left_margin = int(Inches(0.5))
+        section.right_margin = int(Inches(0.5))
+        section.top_margin = int(Inches(0.5))
+        section.bottom_margin = int(Inches(0.5))
     
     # Add company metadata
     about_company = user_data.get('metadata', {}).get('about_company', '')
@@ -195,12 +195,12 @@ def generate_document(user_data, response_text, user_id):
     table.allow_autofit = False
     
     # Calculate available width (8.5 inches - 1 inch total margins = 7.5 inches)
-    available_width = Inches(7.5)
+    available_width = int(Inches(7.5))
     
     # Set column widths
-    first_col_width = Inches(3.0)  # Financial Term column
+    first_col_width = int(Inches(3.0))  # Financial Term column
     remaining_width = available_width - first_col_width
-    year_col_width = remaining_width / len(years)
+    year_col_width = int(remaining_width / len(years))
     
     # Apply column widths
     table.columns[0].width = first_col_width
@@ -239,7 +239,7 @@ def generate_document(user_data, response_text, user_id):
     
     # Apply consistent formatting to all cells
     for row in table.rows:
-        row.height = Inches(0.25)  # Reduced row height
+        row.height = int(Inches(0.25))  # Reduced row height
         for cell in row.cells:
             cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
             # Minimize cell padding
