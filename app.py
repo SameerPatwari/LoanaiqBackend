@@ -162,17 +162,17 @@ def generate_document(user_data, response_text, user_id):
 
     # Add header
     header = doc.sections[0].header
-    header_table = header.add_table(rows=1, cols=2, width=Inches(6))
+    header_table = header.add_table(rows=1, cols=2, width=Inches(7.5))
     header_table.autofit = False
 
     # Set column widths
-    header_table.columns[0].width = Inches(2)
-    header_table.columns[1].width = Inches(4)
+    header_table.columns[0].width = int(Inches(2.5))
+    header_table.columns[1].width = int(Inches(5.0))
 
     # Add logo
     logo_cell = header_table.cell(0, 0)
     logo_run = logo_cell.paragraphs[0].add_run()
-    logo_run.add_picture('static/images/logo.png', width=Inches(1.5))
+    logo_run.add_picture('static/images/logo.png', width=Inches(2.0))
     logo_cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     # Add business name and details to the right
@@ -180,8 +180,18 @@ def generate_document(user_data, response_text, user_id):
     text_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
     text = text_cell.paragraphs[0].add_run("JANAKALYAN SAHAKARI BANK LTD.\nCredit Department\nNote To BLSC")
     text.bold = True
+    text.font.size = Pt(12)
     text_cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
     
+    # Minimize cell padding
+    for cell in header_table.rows[0].cells:
+        for paragraph in cell.paragraphs:
+            paragraph.paragraph_format.space_before = Pt(0)
+            paragraph.paragraph_format.space_after = Pt(0)
+    
+    # Add some space after header
+    doc.add_paragraph().paragraph_format.space_after = Pt(12)
+
     # Add balance sheet table
     doc.add_heading('Balance Sheet', level=1)
     
