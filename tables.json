@@ -1,0 +1,16 @@
+{
+    "financial_position": {
+        "balance_sheet":{},
+        "profit_loss":{
+            "REVENUE":["Revenue from Sale of Products", "Revenue from Sale of Services", "Other Operating Revenues", "Total Revenue from Operations", "Other Income", "Total Revenue"],
+            "EXPENSES":["Total Employee Benefit Expense", "Total Other Expenses", "Finance Costs", "Total Depreciation, Depletion and Amortization Expense", "Total Expenses", "EBITDA", "EBITDA %", "Profit before Tax"],
+            "TAX EXPENSE":["Current Tax", "Deferred Tax", "Profit/(Loss) for the Period from Continuing Operations", "Profit/(Loss)"]
+        },
+        "ratios":{
+            "PROFITABILITY RATIOS":["Revenue Growth (%)", "EBITDA Margins (%)", "EBT Margins (%)", "PAT Margins (%)", "Return on Equity (%)", "Return on Capital Employed (%)"],
+            "LIQUIDITY RATIOS": ["Current Ratio", "Quick Ratio"],
+            "TURNOVER/EFFICIENCY RATIOS": ["Revenue per Employee", "Asset Turnover Ratio"],
+            "EXPENSES RATIOS": ["Employee Cost as % of Revenue", "Finance Cost as % of Revenue"]
+        }
+    }
+}

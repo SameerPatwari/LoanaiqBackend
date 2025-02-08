@@ -1,0 +1,41 @@
+{
+    "financial_position": {
+        "balance_sheet":{},
+        "profit_loss": {
+            "REVENUE": [
+                "Revenue from Sale of Services",
+                "Gross Sales",
+                "Total Revenue from Operations",
+                "Other Income",
+                "Total Revenue"
+            ],
+            "EXPENSES": [
+                "Total Employee Benefit Expense",
+                "Total Other Expenses",
+                "Finance Costs",
+                "Total Depreciation, Depletion and Amortization Expense",
+                "Total Expenses"
+            ],
+            "PROFIT": [
+                "Profit before Tax",
+                "Profit/(Loss)"
+            ]
+        },
+        "ratios": {
+            "PROFITABILITY RATIOS": [
+                "Revenue Growth (%)",
+                "EBITDA Margins (%)",
+                "PAT Margins (%)"
+            ],
+            "LIQUIDITY RATIOS": [
+                "Current Ratio",
+                "Quick Ratio"
+            ],
+            "EXPENSES RATIOS": [
+                "Total Employee Cost (% of Sales)",
+                "Finance Cost (% of Sales)",
+                "Total Other Expenses (% of Sales)"
+            ]
+        }
+    }
+}
