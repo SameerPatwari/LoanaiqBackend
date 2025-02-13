@@ -193,11 +193,11 @@ def generate_document(user_data, response_text, user_id):
     doc.add_paragraph().paragraph_format.space_after = Pt(12)
 
     # Add balance sheet table
-    doc.add_heading('Balance Sheet', level=1)
+    doc.add_heading('Profit & Loss', level=1) 
     
     # Get years and balance sheet data
-    years = user_data['balance_sheet']['years']
-    balance_sheet_data = user_data['balance_sheet']
+    years = user_data['profit_loss']['years']
+    profit_loss_data = user_data['profit_loss']
     
     # Create table with years as columns
     table = doc.add_table(rows=1, cols=len(years) + 1)
@@ -232,7 +232,7 @@ def generate_document(user_data, response_text, user_id):
         cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
     
     # Add data rows
-    for category, items in balance_sheet_data.items():
+    for category, items in profit_loss_data.items():
         if category != 'years':  # Skip the years array
             for item_name, values in items.items():
                 row_cells = table.add_row().cells
@@ -314,7 +314,7 @@ async def generate_note(request: NoteRequest):
         
         # Get GPT-4 response
         response = openai_client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": final_prompt},
                 {"role": "user", "content": json.dumps(filtered_data)}
