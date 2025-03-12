@@ -8,7 +8,7 @@ import boto3
 import json
 import os
 from docx import Document
-from docx.shared import Inches, Pt
+from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 import PyPDF2
@@ -128,22 +128,6 @@ def filter_data_for_table(data, prompt_type):
     return filtered_data
 
 def generate_document(user_data, response_text, user_id):
-    # Set default prompt type
-    prompt_type = "financial_position"
-    
-    # Load prompt
-    with open('prompts.json', 'r') as f:
-        prompts = json.load(f)
-        prompt = prompts.get(prompt_type)
-    
-    # Load user data
-    user_data_path = os.path.join(UPLOADS_DIR, f"{user_id}.json")
-    with open(user_data_path, 'r') as f:
-        user_data = json.load(f)
-    
-    # Filter relevant data
-    filtered_data = filter_data_for_table(user_data, prompt_type)
-
     doc = Document()
     
     # Set narrow margins (0.5 inch on all sides)
@@ -157,7 +141,9 @@ def generate_document(user_data, response_text, user_id):
     # Add company metadata
     about_company = user_data.get('metadata', {}).get('about_company', '')
     if about_company:
-        doc.add_heading('About the Company', level=1)
+        heading = doc.add_heading('About the Company', level=1)
+        heading.style.font.size = Pt(16)
+        heading.style.font.bold = True
         doc.add_paragraph(about_company)
 
     # Add header
@@ -183,21 +169,18 @@ def generate_document(user_data, response_text, user_id):
     text.font.size = Pt(12)
     text_cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
     
-    # Minimize cell padding
-    for cell in header_table.rows[0].cells:
-        for paragraph in cell.paragraphs:
-            paragraph.paragraph_format.space_before = Pt(0)
-            paragraph.paragraph_format.space_after = Pt(0)
-    
     # Add some space after header
     doc.add_paragraph().paragraph_format.space_after = Pt(12)
 
-    # Add balance sheet table
-    doc.add_heading('Profit & Loss', level=1) 
+    # Add ratios table
+    heading = doc.add_heading('', level=1)
+    run = heading.add_run('Ratios')
+    run.font.size = Pt(16)
+    run.font.bold = True
     
-    # Get years and balance sheet data
-    years = user_data['profit_loss']['years']
-    profit_loss_data = user_data['profit_loss']
+    # Get years and ratios data
+    years = user_data['ratios']['years']
+    ratios_data = user_data['ratios']
     
     # Create table with years as columns
     table = doc.add_table(rows=1, cols=len(years) + 1)
@@ -232,7 +215,7 @@ def generate_document(user_data, response_text, user_id):
         cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
     
     # Add data rows
-    for category, items in profit_loss_data.items():
+    for category, items in ratios_data.items():
         if category != 'years':  # Skip the years array
             for item_name, values in items.items():
                 row_cells = table.add_row().cells
@@ -259,9 +242,78 @@ def generate_document(user_data, response_text, user_id):
                 for run in paragraph.runs:
                     run.font.size = Pt(8)  # Smaller font size
     
-    # Add analysis text
-    doc.add_heading('Analysis', level=1)
-    doc.add_paragraph(response_text)
+    # Add space after table
+    doc.add_paragraph().paragraph_format.space_after = Pt(12)
+
+    # Process and format the response text
+    lines = response_text.strip().split('\n')
+    current_section = None
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        if line == "Ratios Analysis:":
+            # Main heading
+            heading = doc.add_heading('', level=1)
+            run = heading.add_run(line.strip(':'))
+            run.font.size = Pt(16)
+            run.font.bold = True
+        elif line.startswith("Analysis of"):
+            # Subheading
+            heading = doc.add_heading('', level=2)
+            run = heading.add_run(line)
+            run.font.size = Pt(14)
+            run.font.bold = True
+            run.font.color.rgb = RGBColor(0x1F, 0x49, 0x7D)  # Dark blue color
+        elif line.startswith("Financial Risk:"):
+            # Get the risk content (everything after "Financial Risk:")
+            risk_content = line[len("Financial Risk:"):].strip()
+            
+            # Create bullet point for financial risk
+            paragraph = doc.add_paragraph()
+            paragraph.style.font.size = Pt(11)
+            # Add bullet point formatting
+            paragraph.paragraph_format.left_indent = Inches(0.25)
+            paragraph.paragraph_format.first_line_indent = Inches(-0.25)
+            
+            # Add bullet point
+            bullet_run = paragraph.add_run('• ')
+            bullet_run.font.size = Pt(11)
+            
+            # Add "Financial Risk:" in red
+            risk_label = paragraph.add_run("Financial Risk: ")
+            risk_label.font.size = Pt(11)
+            risk_label.font.bold = True
+            risk_label.font.color.rgb = RGBColor(0xC0, 0x00, 0x00)  # Dark red color
+            
+            # Add the risk content
+            content_run = paragraph.add_run(risk_content)
+            content_run.font.size = Pt(11)
+            
+            # Add spacing after paragraph
+            paragraph.paragraph_format.space_after = Pt(6)
+        else:
+            # Content bullet points
+            if line.startswith('- '):
+                line = line[2:]  # Remove the bullet point
+            if line.startswith('**') and line.endswith('**'):
+                line = line[2:-2]  # Remove asterisks
+            
+            paragraph = doc.add_paragraph()
+            paragraph.style.font.size = Pt(11)
+            # Add a custom bullet point
+            paragraph.paragraph_format.left_indent = Inches(0.25)
+            paragraph.paragraph_format.first_line_indent = Inches(-0.25)
+            bullet_run = paragraph.add_run('• ')
+            bullet_run.font.size = Pt(11)
+            # Add the content
+            content_run = paragraph.add_run(line)
+            content_run.font.size = Pt(11)
+            
+            # Add spacing between bullet points
+            paragraph.paragraph_format.space_after = Pt(6)
     
     # Save document
     output_path = os.path.join(OUTPUT_DIR, f'analysis_{user_id}.docx')
@@ -283,52 +335,132 @@ def cleanup_user_files(userid):
 @app.post("/generate-note")
 async def generate_note(request: NoteRequest):
     try:
-        # Set default prompt type
-        prompt_type = "financial_position"
-        
-        # Load prompt
-        with open('prompts.json', 'r') as f:
-            prompts = json.load(f)
-            prompt = prompts.get(prompt_type)
-
-        if not prompt:
-            raise HTTPException(status_code=400, detail="Invalid prompt type")
-        
-        # Load user data
+        # Check if user data exists, if not try to load it
         user_data_path = os.path.join(UPLOADS_DIR, f"{request.user_id}.json")
-        with open(user_data_path, 'r') as f:
-            user_data = json.load(f)
+        if not os.path.exists(user_data_path):
+            try:
+                # Try to download from S3
+                s3.download_file(
+                    os.getenv('S3_BUCKET_NAME'),
+                    f"{request.user_id}.json",
+                    user_data_path
+                )
+            except Exception as s3_error:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"User data not found. Please ensure data is loaded first. Error: {str(s3_error)}"
+                )
+
+        # Load user data for document generation
+        try:
+            with open(user_data_path, 'r', encoding='utf-8') as f:
+                user_data = json.load(f)
+        except json.JSONDecodeError as json_error:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid JSON data format. Error: {str(json_error)}"
+            )
+        except Exception as read_error:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error reading user data: {str(read_error)}"
+            )
+
+        # Initialize list to store all analyses
+        all_analyses = ["Ratios Analysis:"]  # Start with main heading
+
+        # Process each field in the ratios table
+        ratios_data = user_data.get('ratios')
+        if not ratios_data:
+            raise HTTPException(
+                status_code=400,
+                detail="No ratios data found in the user data"
+            )
+
+        print("Available categories in ratios:", list(ratios_data.keys()))
+
+        for category, fields in ratios_data.items():
+            if category == 'years':  # Skip the years array
+                continue
+            
+            print(f"\nProcessing category: {category}")
+            print(f"Fields in {category}:", list(fields.keys()))
+            
+            for field in fields.keys():
+                # Construct prompt filename
+                prompt_file = f"ratios_{category}_{field}.txt"
+                prompt_path = os.path.join("prompt_library", prompt_file)
+                
+                print(f"Looking for prompt file: {prompt_path}")
+                
+                if os.path.exists(prompt_path):
+                    print(f"Found prompt file for {field}")
+                    # Load prompt
+                    with open(prompt_path, 'r', encoding='utf-8') as f:
+                        prompt_content = f.read()
+                    
+                    # Get field data
+                    years = ratios_data['years']
+                    values = ratios_data[category][field]
+                    
+                    # Create data string
+                    data_str = "Years             " + "   ".join(years) + "\n\n"
+                    data_str += f"{field}\t   " + "\t   ".join(str(val) for val in values)
+                    
+                    print(f"Data for {field}:")
+                    print(data_str)
+                    
+                    # Replace placeholder in prompt with actual data
+                    final_prompt = prompt_content.replace("DATA:", f"DATA:\n{data_str}")
+                    
+                    try:
+                        # Get GPT analysis
+                        response = openai_client.chat.completions.create(
+                            model="gpt-4o",
+                            messages=[
+                                {"role": "system", "content": final_prompt},
+                                {"role": "user", "content": f"""Please analyze the data provided in the prompt and format your response exactly as follows:
+
+Analysis of {field}:
+- [First insight following the format: The change 'X' in parameter 'Y' maybe caused by 'Z' and affects 'A']
+- [Second insight following the format: The change 'X' in parameter 'Y' maybe caused by 'Z' and affects 'A']
+- [Third insight following the format: The change 'X' in parameter 'Y' maybe caused by 'Z' and affects 'A']
+- Financial Risk: [One comprehensive risk statement]"""}
+                            ],
+                            temperature=0,
+                            top_p=0.1
+                        )
+                        
+                        # Add analysis to list
+                        analysis_text = response.choices[0].message.content.strip()
+                        if not analysis_text.startswith("Analysis of"):
+                            analysis_text = f"Analysis of {field}:\n" + analysis_text
+                        all_analyses.append(analysis_text)
+                        print(f"Successfully generated analysis for {field}")
+                    except Exception as gpt_error:
+                        print(f"Error getting GPT analysis for {field}: {str(gpt_error)}")
+                        continue  # Skip this field and continue with others
+                else:
+                    print(f"No prompt file found for {field}")
         
-        # Filter relevant data
-        filtered_data = filter_data_for_prompt(user_data, prompt_type)
+        print(f"\nTotal analyses generated: {len(all_analyses) - 1}")  # -1 for the heading
         
-        # Add profile document content if exists
-        profile_content = ""
-        profile_files = [f for f in os.listdir(UPLOADS_DIR) if f.endswith(('.docx', '.pdf'))]
-        if profile_files:
-            profile_path = os.path.join(UPLOADS_DIR, profile_files[0])
-            profile_content = extract_text_from_document(profile_path)
+        if len(all_analyses) <= 1:  # Only contains the heading
+            raise HTTPException(
+                status_code=500,
+                detail="No analyses were generated. Please check the prompt library and GPT service."
+            )
+
+        # Combine all analyses with proper spacing
+        combined_analysis = "\n\n".join(all_analyses)
         
-        # Prepare final prompt
-        final_prompt = prompt.replace("<Borrower Profile>", profile_content)
-        
-        # Get GPT-4 response
-        response = openai_client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": final_prompt},
-                {"role": "user", "content": json.dumps(filtered_data)}
-            ]
-        )
-        
-        # Save response
-        response_text = response.choices[0].message.content
+        # Save combined analysis
         response_path = os.path.join(OUTPUT_DIR, f"{request.user_id}_response.json")
-        with open(response_path, 'w') as f:
-            json.dump({prompt_type: response_text}, f)
+        with open(response_path, 'w', encoding='utf-8') as f:
+            json.dump({"financial_position": combined_analysis}, f)
         
         # Generate document
-        doc_path = generate_document(user_data, response_text, request.user_id)
+        doc_path = generate_document(user_data, combined_analysis, request.user_id)
         
         # After sending response, clean up files
         cleanup_user_files(request.user_id)
@@ -341,6 +473,8 @@ async def generate_note(request: NoteRequest):
         
     except Exception as e:
         print(f"Error in generate_note: {str(e)}")  # Add this for debugging
+        # Clean up any partial files that might have been created
+        cleanup_user_files(request.user_id)
         raise HTTPException(status_code=400, detail=str(e))
 
 if __name__ == "__main__":
