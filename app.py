@@ -137,16 +137,26 @@ def generate_document(user_data, response_text, user_id):
         section.right_margin = int(Inches(0.5))
         section.top_margin = int(Inches(0.5))
         section.bottom_margin = int(Inches(0.5))
-    
-    # Add company metadata
-    about_company = user_data.get('metadata', {}).get('about_company', '')
-    if about_company:
-        heading = doc.add_heading('About the Company', level=1)
-        heading.style.font.size = Pt(16)
-        heading.style.font.bold = True
-        doc.add_paragraph(about_company)
 
-    # Add header
+    # Add cover page with APPRAISAL NOTE
+    cover_heading = doc.add_heading('APPRAISAL NOTE', level=0)
+    cover_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    cover_heading.style.font.size = Pt(20)
+    cover_heading.style.font.bold = True
+    
+    # Add index
+    index_heading = doc.add_paragraph()
+    index_run = index_heading.add_run("\n\nINDEX")
+    index_run.bold = True
+    index_run.font.size = Pt(14)
+    
+    # Add index entries placeholder
+    index_entries = []  # Store entries to add later
+    
+    # Add page break after index
+    doc.add_page_break()
+    
+    # Add header to all pages except cover
     header = doc.sections[0].header
     header_table = header.add_table(rows=1, cols=2, width=Inches(7.5))
     header_table.autofit = False
@@ -172,76 +182,45 @@ def generate_document(user_data, response_text, user_id):
     # Add some space after header
     doc.add_paragraph().paragraph_format.space_after = Pt(12)
 
-    def add_table_to_document(table_name, table_data):
-        # Add table heading
-        heading = doc.add_heading('', level=1)
-        run = heading.add_run(table_name)
-        run.font.size = Pt(16)
-        run.font.bold = True
+    # List to store all analyses for recommendations
+    all_field_analyses = []
+    
+    # Dictionary to store section bookmarks
+    bookmarks = {}
+    
+    def add_bookmark(paragraph, bookmark_id):
+        """Add a bookmark to a paragraph"""
+        # Create bookmark start and end elements
+        start = OxmlElement('w:bookmarkStart')
+        start.set(qn('w:id'), '0')
+        start.set(qn('w:name'), bookmark_id)
+        paragraph._p.append(start)
         
-        # Get years and data
-        years = table_data['years']
-        
-        # Create table with years as columns
-        table = doc.add_table(rows=1, cols=len(years) + 1)
-        table.style = 'Table Grid'
-        table.allow_autofit = False
-        
-        # Calculate available width
-        available_width = int(Inches(7.5))
-        first_col_width = int(Inches(3.0))
-        remaining_width = available_width - first_col_width
-        year_col_width = int(remaining_width / len(years))
-        
-        # Apply column widths
-        table.columns[0].width = first_col_width
-        for i in range(1, len(table.columns)):
-            table.columns[i].width = year_col_width
-        
-        # Add header row
-        header_cells = table.rows[0].cells
-        header_cells[0].text = 'Financial Term'
-        for idx, year in enumerate(years):
-            header_cells[idx + 1].text = year
-        
-        # Format header row
-        for cell in header_cells:
-            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-            run = cell.paragraphs[0].runs[0] if cell.paragraphs[0].runs else cell.paragraphs[0].add_run()
-            run.font.bold = True
-            run.font.size = Pt(9)
-            cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
-        
-        # Add data rows
-        for category, items in table_data.items():
-            if category != 'years':
-                for item_name, values in items.items():
-                    row_cells = table.add_row().cells
-                    row_cells[0].text = item_name
-                    row_cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
-                    
-                    for idx, value in enumerate(values):
-                        cell = row_cells[idx + 1]
-                        cell.text = str(value)
-                        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        
-        # Format all cells
-        for row in table.rows:
-            row.height = int(Inches(0.25))
-            for cell in row.cells:
-                cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
-                for paragraph in cell.paragraphs:
-                    paragraph.paragraph_format.space_before = Pt(0)
-                    paragraph.paragraph_format.space_after = Pt(0)
-                    for run in paragraph.runs:
-                        run.font.size = Pt(8)
-        
-        # Add space after table
-        doc.add_paragraph().paragraph_format.space_after = Pt(12)
+        end = OxmlElement('w:bookmarkEnd')
+        end.set(qn('w:id'), '0')
+        end.set(qn('w:name'), bookmark_id)
+        paragraph._p.append(end)
+    
+    # Add company metadata
+    about_company = user_data.get('metadata', {}).get('about_company', '')
+    if about_company:
+        heading = doc.add_heading('About the Company', level=1)
+        heading.style.font.size = Pt(16)
+        heading.style.font.bold = True
+        add_bookmark(heading, 'about_company')
+        para = doc.add_paragraph(about_company)
+        para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+    # Add main analysis heading
+    analysis_heading = doc.add_heading('Analysis Of Financial Statement', level=1)
+    analysis_heading.style.font.size = Pt(16)
+    analysis_heading.style.font.bold = True
+    add_bookmark(analysis_heading, 'analysis')
 
     # Process and format the response text
     lines = response_text.strip().split('\n')
     current_section = None
+    current_analysis = []
     
     for line in lines:
         line = line.strip()
@@ -250,11 +229,13 @@ def generate_document(user_data, response_text, user_id):
             
         if line in ["Ratios Analysis:", "Balance Sheet Analysis:", "Profit and Loss Analysis:"]:
             # Main heading
-            heading = doc.add_heading('', level=1)
+            section_name = line.strip(':').lower().replace(' ', '_')
+            heading = doc.add_heading('', level=2)
             run = heading.add_run(line.strip(':'))
-            run.font.size = Pt(16)
+            run.font.size = Pt(14)
             run.font.bold = True
-            current_section = line.split()[0].lower()  # Get section type (ratios, balance_sheet, profit_loss)
+            add_bookmark(heading, section_name)
+            current_section = line.split()[0].lower()
         elif line.endswith("Table"):
             # Add appropriate table based on current section
             section_key = current_section
@@ -267,67 +248,258 @@ def generate_document(user_data, response_text, user_id):
                 print(f"Generating table for {section_key}")
                 # Remove the word "Table" from the heading when adding the table
                 table_name = line.replace(" Table", "")
-                # Use the raw section data directly
-                add_table_to_document(table_name, user_data[section_key])
+                add_table_to_document(doc, table_name, user_data[section_key])
         elif line.startswith("Analysis of"):
+            # Store previous analysis if exists
+            if current_analysis:
+                all_field_analyses.append("\n".join(current_analysis))
+                current_analysis = []
+            # Start new analysis
+            current_analysis = [line]
             # Subheading
-            heading = doc.add_heading('', level=2)
+            heading = doc.add_heading('', level=3)
             run = heading.add_run(line)
-            run.font.size = Pt(14)
+            run.font.size = Pt(12)
             run.font.bold = True
             run.font.color.rgb = RGBColor(0x1F, 0x49, 0x7D)  # Dark blue color
-        elif line.startswith("Financial Risk:"):
-            # Get the risk content (everything after "Financial Risk:")
-            risk_content = line[len("Financial Risk:"):].strip()
-            
-            # Create bullet point for financial risk
-            paragraph = doc.add_paragraph()
-            paragraph.style.font.size = Pt(11)
-            # Add bullet point formatting
-            paragraph.paragraph_format.left_indent = Inches(0.25)
-            paragraph.paragraph_format.first_line_indent = Inches(-0.25)
-            
-            # Add bullet point
-            bullet_run = paragraph.add_run('• ')
-            bullet_run.font.size = Pt(11)
-            
-            # Add "Financial Risk:" in red
-            risk_label = paragraph.add_run("Financial Risk: ")
-            risk_label.font.size = Pt(11)
-            risk_label.font.bold = True
-            risk_label.font.color.rgb = RGBColor(0xC0, 0x00, 0x00)  # Dark red color
-            
-            # Add the risk content
-            content_run = paragraph.add_run(risk_content)
-            content_run.font.size = Pt(11)
-            
-            # Add spacing after paragraph
-            paragraph.paragraph_format.space_after = Pt(6)
         else:
+            # Add line to current analysis
+            current_analysis.append(line)
             # Content bullet points
             if line.startswith('- '):
-                line = line[2:]  # Remove the bullet point
+                line = line[2:]
             if line.startswith('**') and line.endswith('**'):
-                line = line[2:-2]  # Remove asterisks
+                line = line[2:-2]
             
             paragraph = doc.add_paragraph()
             paragraph.style.font.size = Pt(11)
-            # Add a custom bullet point
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            
+            if line.startswith("Financial Risk:"):
+                # Add bullet point
+                bullet_run = paragraph.add_run('• ')
+                bullet_run.font.size = Pt(11)
+                
+                # Split into label and content
+                risk_parts = line.split(":", 1)
+                risk_label = risk_parts[0] + ":"
+                risk_content = risk_parts[1].strip() if len(risk_parts) > 1 else ""
+                
+                # Add "Financial Risk:" in red
+                risk_run = paragraph.add_run(risk_label + " ")
+                risk_run.font.size = Pt(11)
+                risk_run.font.bold = True
+                risk_run.font.color.rgb = RGBColor(0xC0, 0x00, 0x00)  # Dark red color
+                
+                # Add the risk content
+                if risk_content:
+                    content_run = paragraph.add_run(risk_content)
+                    content_run.font.size = Pt(11)
+            else:
+                # Add bullet point
+                bullet_run = paragraph.add_run('• ')
+                bullet_run.font.size = Pt(11)
+                # Add the content
+                content_run = paragraph.add_run(line)
+                content_run.font.size = Pt(11)
+            
+            # Set consistent paragraph formatting
             paragraph.paragraph_format.left_indent = Inches(0.25)
             paragraph.paragraph_format.first_line_indent = Inches(-0.25)
-            bullet_run = paragraph.add_run('• ')
-            bullet_run.font.size = Pt(11)
-            # Add the content
-            content_run = paragraph.add_run(line)
-            content_run.font.size = Pt(11)
-            
-            # Add spacing between bullet points
             paragraph.paragraph_format.space_after = Pt(6)
+            paragraph.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+    # Store last analysis if exists
+    if current_analysis:
+        all_field_analyses.append("\n".join(current_analysis))
+
+    # Add Recommendations section
+    recommendations_heading = doc.add_heading('Recommendations', level=2)
+    recommendations_heading.style.font.size = Pt(14)
+    add_bookmark(recommendations_heading, 'recommendations')
+
+    # Generate recommendations using GPT
+    try:
+        # Combine all analyses and truncate to fit token limit
+        all_analyses_text = "\n\n".join(all_field_analyses)
+        # Roughly estimate tokens (4 chars per token) and limit to 6000 tokens
+        max_chars = 24000  # 6000 tokens * 4 chars per token
+        if len(all_analyses_text) > max_chars:
+            all_analyses_text = all_analyses_text[:max_chars] + "\n[Analysis truncated due to length...]"
+        
+        # Load recommendations prompt
+        with open(os.path.join("prompt_library", "recommendations.txt"), 'r', encoding='utf-8') as f:
+            recommendations_prompt = f.read()
+        
+        # Get recommendations from GPT
+        response = openai_client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": recommendations_prompt},
+                {"role": "user", "content": f"Based on the following analyses, provide recommendations:\n\n{all_analyses_text}"}
+            ],
+            temperature=0,
+            top_p=0.1
+        )
+        
+        # Add recommendations to document
+        recommendations = response.choices[0].message.content.strip()
+        for line in recommendations.split('\n'):
+            if line.strip():
+                if line.startswith('#') or line.startswith('*'):
+                    # Handle headers or bullet points
+                    para = doc.add_paragraph(line.lstrip('#* '))
+                    para.style.font.size = Pt(11)
+                else:
+                    para = doc.add_paragraph(line)
+                    para.style.font.size = Pt(11)
+                para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    except Exception as e:
+        print(f"Error generating recommendations: {str(e)}")
+        # Add error message to document
+        doc.add_paragraph("Unable to generate recommendations at this time.")
+
+    # Update index with hyperlinks
+    index_items = [
+        ("About the Company", 1, 'about_company'),
+        ("Analysis Of Financial Statement", 1, 'analysis'),
+        ("Ratios Analysis", 2, 'ratios_analysis'),
+        ("Balance Sheet Analysis", 2, 'balance_sheet_analysis'),
+        ("Profit and Loss Analysis", 2, 'profit_and_loss_analysis'),
+        ("Recommendations", 2, 'recommendations')
+    ]
     
+    for title, level, bookmark_id in index_items:
+        # Create paragraph for index entry
+        index_para = doc.add_paragraph()
+        index_para.paragraph_format.left_indent = Inches(0.5 if level == 2 else 0)
+        
+        # Add hyperlink
+        hyperlink = add_hyperlink(doc, index_para, title, bookmark_id)
+        hyperlink.font.size = Pt(11)
+        if level == 1:
+            hyperlink.font.bold = True
+        
+        # Add dot leaders
+        dots = index_para.add_run('.' * 50)
+        dots.font.size = Pt(11)
+        
+        # Add newline
+        index_para.paragraph_format.space_after = Pt(6)
+
     # Save document
     output_path = os.path.join(OUTPUT_DIR, f'analysis_{user_id}.docx')
     doc.save(output_path)
     return output_path
+
+def add_hyperlink(doc, paragraph, text, bookmark_id):
+    """
+    Add a hyperlink to a paragraph that links to a bookmark
+    """
+    # Create the w:hyperlink element
+    hyperlink = OxmlElement('w:hyperlink')
+    hyperlink.set(qn('w:anchor'), bookmark_id)
+    
+    # Create a new run
+    new_run = OxmlElement('w:r')
+    rPr = OxmlElement('w:rPr')
+    
+    # Add hyperlink style
+    c = OxmlElement('w:color')
+    c.set(qn('w:val'), "0000FF")
+    rPr.append(c)
+    
+    u = OxmlElement('w:u')
+    u.set(qn('w:val'), "single")
+    rPr.append(u)
+    
+    new_run.append(rPr)
+    t = OxmlElement('w:t')
+    t.text = text
+    new_run.append(t)
+    hyperlink.append(new_run)
+    
+    r = paragraph.add_run()
+    r._r.append(hyperlink)
+    return r
+
+def qn(tag):
+    """
+    Turn a namespace prefixed tag into a Clark-notation qualified tag
+    """
+    prefix, tagname = tag.split(':')
+    uri = {
+        'w': 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+    }[prefix]
+    return '{{{}}}{}'.format(uri, tagname)
+
+def add_table_to_document(doc, table_name, table_data):
+    """Add a table to the document with the given name and data"""
+    # Add table heading
+    heading = doc.add_heading('', level=2)
+    run = heading.add_run(table_name)
+    run.font.size = Pt(14)
+    run.font.bold = True
+    
+    # Get years and data
+    years = table_data['years']
+    
+    # Create table with years as columns
+    table = doc.add_table(rows=1, cols=len(years) + 1)
+    table.style = 'Table Grid'
+    table.allow_autofit = False
+    
+    # Calculate available width
+    available_width = int(Inches(7.5))
+    first_col_width = int(Inches(3.0))
+    remaining_width = available_width - first_col_width
+    year_col_width = int(remaining_width / len(years))
+    
+    # Apply column widths
+    table.columns[0].width = first_col_width
+    for i in range(1, len(table.columns)):
+        table.columns[i].width = year_col_width
+    
+    # Add header row
+    header_cells = table.rows[0].cells
+    header_cells[0].text = 'Financial Term'
+    for idx, year in enumerate(years):
+        header_cells[idx + 1].text = year
+    
+    # Format header row
+    for cell in header_cells:
+        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = cell.paragraphs[0].runs[0] if cell.paragraphs[0].runs else cell.paragraphs[0].add_run()
+        run.font.bold = True
+        run.font.size = Pt(9)
+        cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Add data rows
+    for category, items in table_data.items():
+        if category != 'years':
+            for item_name, values in items.items():
+                row_cells = table.add_row().cells
+                row_cells[0].text = item_name
+                row_cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+                
+                for idx, value in enumerate(values):
+                    cell = row_cells[idx + 1]
+                    cell.text = str(value)
+                    cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    
+    # Format all cells
+    for row in table.rows:
+        row.height = int(Inches(0.25))
+        for cell in row.cells:
+            cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
+            for paragraph in cell.paragraphs:
+                paragraph.paragraph_format.space_before = Pt(0)
+                paragraph.paragraph_format.space_after = Pt(0)
+                for run in paragraph.runs:
+                    run.font.size = Pt(8)
+    
+    # Add space after table
+    doc.add_paragraph().paragraph_format.space_after = Pt(12)
 
 def cleanup_user_files(userid):
     """Delete all files related to the userid from uploads and output folders"""
@@ -393,7 +565,7 @@ async def generate_note(request: NoteRequest):
                 'name': 'Profit and Loss',
                 'data_key': 'profit_loss',
                 'prompt_prefix': 'profit_loss',
-                'heading': 'Profit and Loss Analysis:'
+                'heading': 'Statement Of Profitability Analysis:'
             }
         ]
 
