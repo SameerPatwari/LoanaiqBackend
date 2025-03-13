@@ -172,78 +172,72 @@ def generate_document(user_data, response_text, user_id):
     # Add some space after header
     doc.add_paragraph().paragraph_format.space_after = Pt(12)
 
-    # Add ratios table
-    heading = doc.add_heading('', level=1)
-    run = heading.add_run('Ratios')
-    run.font.size = Pt(16)
-    run.font.bold = True
-    
-    # Get years and ratios data
-    years = user_data['ratios']['years']
-    ratios_data = user_data['ratios']
-    
-    # Create table with years as columns
-    table = doc.add_table(rows=1, cols=len(years) + 1)
-    table.style = 'Table Grid'
-    table.allow_autofit = False
-    
-    # Calculate available width (8.5 inches - 1 inch total margins = 7.5 inches)
-    available_width = int(Inches(7.5))
-    
-    # Set column widths
-    first_col_width = int(Inches(3.0))  # Financial Term column
-    remaining_width = available_width - first_col_width
-    year_col_width = int(remaining_width / len(years))
-    
-    # Apply column widths
-    table.columns[0].width = first_col_width
-    for i in range(1, len(table.columns)):
-        table.columns[i].width = year_col_width
-    
-    # Add header row with formatting
-    header_cells = table.rows[0].cells
-    header_cells[0].text = 'Financial Term'
-    for idx, year in enumerate(years):
-        header_cells[idx + 1].text = year
-    
-    # Format header row
-    for cell in header_cells:
-        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run = cell.paragraphs[0].runs[0] if cell.paragraphs[0].runs else cell.paragraphs[0].add_run()
+    def add_table_to_document(table_name, table_data):
+        # Add table heading
+        heading = doc.add_heading('', level=1)
+        run = heading.add_run(table_name)
+        run.font.size = Pt(16)
         run.font.bold = True
-        run.font.size = Pt(9)  # Reduced font size
-        cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
-    
-    # Add data rows
-    for category, items in ratios_data.items():
-        if category != 'years':  # Skip the years array
-            for item_name, values in items.items():
-                row_cells = table.add_row().cells
-                
-                # Format financial term cell
-                row_cells[0].text = item_name
-                row_cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
-                
-                # Add and format values for each year
-                for idx, value in enumerate(values):
-                    cell = row_cells[idx + 1]
-                    cell.text = str(value)
-                    cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    
-    # Apply consistent formatting to all cells
-    for row in table.rows:
-        row.height = int(Inches(0.25))  # Reduced row height
-        for cell in row.cells:
+        
+        # Get years and data
+        years = table_data['years']
+        
+        # Create table with years as columns
+        table = doc.add_table(rows=1, cols=len(years) + 1)
+        table.style = 'Table Grid'
+        table.allow_autofit = False
+        
+        # Calculate available width
+        available_width = int(Inches(7.5))
+        first_col_width = int(Inches(3.0))
+        remaining_width = available_width - first_col_width
+        year_col_width = int(remaining_width / len(years))
+        
+        # Apply column widths
+        table.columns[0].width = first_col_width
+        for i in range(1, len(table.columns)):
+            table.columns[i].width = year_col_width
+        
+        # Add header row
+        header_cells = table.rows[0].cells
+        header_cells[0].text = 'Financial Term'
+        for idx, year in enumerate(years):
+            header_cells[idx + 1].text = year
+        
+        # Format header row
+        for cell in header_cells:
+            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = cell.paragraphs[0].runs[0] if cell.paragraphs[0].runs else cell.paragraphs[0].add_run()
+            run.font.bold = True
+            run.font.size = Pt(9)
             cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
-            # Minimize cell padding
-            for paragraph in cell.paragraphs:
-                paragraph.paragraph_format.space_before = Pt(0)
-                paragraph.paragraph_format.space_after = Pt(0)
-                for run in paragraph.runs:
-                    run.font.size = Pt(8)  # Smaller font size
-    
-    # Add space after table
-    doc.add_paragraph().paragraph_format.space_after = Pt(12)
+        
+        # Add data rows
+        for category, items in table_data.items():
+            if category != 'years':
+                for item_name, values in items.items():
+                    row_cells = table.add_row().cells
+                    row_cells[0].text = item_name
+                    row_cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+                    
+                    for idx, value in enumerate(values):
+                        cell = row_cells[idx + 1]
+                        cell.text = str(value)
+                        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        
+        # Format all cells
+        for row in table.rows:
+            row.height = int(Inches(0.25))
+            for cell in row.cells:
+                cell.vertical_alignment = WD_ALIGN_PARAGRAPH.CENTER
+                for paragraph in cell.paragraphs:
+                    paragraph.paragraph_format.space_before = Pt(0)
+                    paragraph.paragraph_format.space_after = Pt(0)
+                    for run in paragraph.runs:
+                        run.font.size = Pt(8)
+        
+        # Add space after table
+        doc.add_paragraph().paragraph_format.space_after = Pt(12)
 
     # Process and format the response text
     lines = response_text.strip().split('\n')
@@ -254,12 +248,27 @@ def generate_document(user_data, response_text, user_id):
         if not line:
             continue
             
-        if line == "Ratios Analysis:":
+        if line in ["Ratios Analysis:", "Balance Sheet Analysis:", "Profit and Loss Analysis:"]:
             # Main heading
             heading = doc.add_heading('', level=1)
             run = heading.add_run(line.strip(':'))
             run.font.size = Pt(16)
             run.font.bold = True
+            current_section = line.split()[0].lower()  # Get section type (ratios, balance_sheet, profit_loss)
+        elif line.endswith("Table"):
+            # Add appropriate table based on current section
+            section_key = current_section
+            if section_key == "balance":
+                section_key = "balance_sheet"
+            elif section_key == "profit":
+                section_key = "profit_loss"
+            
+            if section_key in user_data:
+                print(f"Generating table for {section_key}")
+                # Remove the word "Table" from the heading when adding the table
+                table_name = line.replace(" Table", "")
+                # Use the raw section data directly
+                add_table_to_document(table_name, user_data[section_key])
         elif line.startswith("Analysis of"):
             # Subheading
             heading = doc.add_heading('', level=2)
@@ -366,86 +375,123 @@ async def generate_note(request: NoteRequest):
                 detail=f"Error reading user data: {str(read_error)}"
             )
 
+        # Process each section (ratios, balance_sheet, profit_loss)
+        sections = [
+            {
+                'name': 'Ratios',
+                'data_key': 'ratios',
+                'prompt_prefix': 'ratios',
+                'heading': 'Ratios Analysis:'
+            },
+            {
+                'name': 'Balance Sheet',
+                'data_key': 'balance_sheet',
+                'prompt_prefix': 'balance_sheet',
+                'heading': 'Balance Sheet Analysis:'
+            },
+            {
+                'name': 'Profit and Loss',
+                'data_key': 'profit_loss',
+                'prompt_prefix': 'profit_loss',
+                'heading': 'Profit and Loss Analysis:'
+            }
+        ]
+
         # Initialize list to store all analyses
-        all_analyses = ["Ratios Analysis:"]  # Start with main heading
+        all_analyses = []
 
-        # Process each field in the ratios table
-        ratios_data = user_data.get('ratios')
-        if not ratios_data:
-            raise HTTPException(
-                status_code=400,
-                detail="No ratios data found in the user data"
-            )
-
-        print("Available categories in ratios:", list(ratios_data.keys()))
-
-        for category, fields in ratios_data.items():
-            if category == 'years':  # Skip the years array
+        for section in sections:
+            print(f"\nProcessing {section['name']} section")
+            
+            # Get section data
+            section_data = user_data.get(section['data_key'])
+            if not section_data:
+                print(f"No {section['name']} data found in user data")
                 continue
+
+            # Add section heading
+            all_analyses.append(section['heading'])
             
-            print(f"\nProcessing category: {category}")
-            print(f"Fields in {category}:", list(fields.keys()))
-            
-            for field in fields.keys():
-                # Construct prompt filename
-                prompt_file = f"ratios_{category}_{field}.txt"
-                prompt_path = os.path.join("prompt_library", prompt_file)
+            print(f"Available categories in {section['name']}:", list(section_data.keys()))
+
+            # Add table for this section (using section_data directly instead of filtered data)
+            if section_data and 'years' in section_data:  # If section has data and years, it can be displayed as a table
+                print(f"Adding table marker for {section['name']}")
+                all_analyses.append(f"{section['name']} Table")  # This will trigger table generation in the document
+
+            # Process each field in the section
+            for category, fields in section_data.items():
+                if category == 'years':  # Skip the years array
+                    continue
                 
-                print(f"Looking for prompt file: {prompt_path}")
+                print(f"\nProcessing category in {section['name']}: {category}")
+                print(f"Fields in {category}:", list(fields.keys()))
                 
-                if os.path.exists(prompt_path):
-                    print(f"Found prompt file for {field}")
-                    # Load prompt
-                    with open(prompt_path, 'r', encoding='utf-8') as f:
-                        prompt_content = f.read()
+                for field in fields.keys():
+                    # Construct prompt filename
+                    prompt_file = f"{section['prompt_prefix']}_{category}_{field}.txt"
+                    prompt_path = os.path.join("prompt_library", prompt_file)
                     
-                    # Get field data
-                    years = ratios_data['years']
-                    values = ratios_data[category][field]
+                    print(f"Looking for prompt file: {prompt_path}")
                     
-                    # Create data string
-                    data_str = "Years             " + "   ".join(years) + "\n\n"
-                    data_str += f"{field}\t   " + "\t   ".join(str(val) for val in values)
-                    
-                    print(f"Data for {field}:")
-                    print(data_str)
-                    
-                    # Replace placeholder in prompt with actual data
-                    final_prompt = prompt_content.replace("DATA:", f"DATA:\n{data_str}")
-                    
-                    try:
-                        # Get GPT analysis
-                        response = openai_client.chat.completions.create(
-                            model="gpt-4o",
-                            messages=[
-                                {"role": "system", "content": final_prompt},
-                                {"role": "user", "content": f"""Please analyze the data provided in the prompt and format your response exactly as follows:
+                    if os.path.exists(prompt_path):
+                        print(f"Found prompt file for {field}")
+                        # Load prompt
+                        with open(prompt_path, 'r', encoding='utf-8') as f:
+                            prompt_content = f.read()
+                        
+                        # Get field data
+                        years = section_data['years']
+                        values = section_data[category][field]
+                        
+                        # Create data string
+                        data_str = "Years             " + "   ".join(years) + "\n\n"
+                        data_str += f"{field}\t   " + "\t   ".join(str(val) for val in values)
+                        
+                        print(f"Data for {field}:")
+                        print(data_str)
+                        
+                        # Replace placeholder in prompt with actual data
+                        final_prompt = prompt_content.replace("DATA:", f"DATA:\n{data_str}")
+                        
+                        try:
+                            # Get GPT analysis
+                            response = openai_client.chat.completions.create(
+                                model="gpt-4",
+                                messages=[
+                                    {"role": "system", "content": final_prompt},
+                                    {"role": "user", "content": f"""Please analyze the following financial data and provide insights:
+
+Years: {', '.join(years)}
+Values: {', '.join(str(val) for val in values)}
+
+Please format your response exactly as follows:
 
 Analysis of {field}:
 - [First insight following the format: The change 'X' in parameter 'Y' maybe caused by 'Z' and affects 'A']
 - [Second insight following the format: The change 'X' in parameter 'Y' maybe caused by 'Z' and affects 'A']
 - [Third insight following the format: The change 'X' in parameter 'Y' maybe caused by 'Z' and affects 'A']
 - Financial Risk: [One comprehensive risk statement]"""}
-                            ],
-                            temperature=0,
-                            top_p=0.1
-                        )
-                        
-                        # Add analysis to list
-                        analysis_text = response.choices[0].message.content.strip()
-                        if not analysis_text.startswith("Analysis of"):
-                            analysis_text = f"Analysis of {field}:\n" + analysis_text
-                        all_analyses.append(analysis_text)
-                        print(f"Successfully generated analysis for {field}")
-                    except Exception as gpt_error:
-                        print(f"Error getting GPT analysis for {field}: {str(gpt_error)}")
-                        continue  # Skip this field and continue with others
-                else:
-                    print(f"No prompt file found for {field}")
+                                ],
+                                temperature=0,
+                                top_p=0.1
+                            )
+                            
+                            # Add analysis to list
+                            analysis_text = response.choices[0].message.content.strip()
+                            if not analysis_text.startswith("Analysis of"):
+                                analysis_text = f"Analysis of {field}:\n" + analysis_text
+                            all_analyses.append(analysis_text)
+                            print(f"Successfully generated analysis for {field}")
+                        except Exception as gpt_error:
+                            print(f"Error getting GPT analysis for {field}: {str(gpt_error)}")
+                            continue  # Skip this field and continue with others
+                    else:
+                        print(f"No prompt file found for {field}")
+
+        print(f"\nTotal analyses generated: {len(all_analyses)}")
         
-        print(f"\nTotal analyses generated: {len(all_analyses) - 1}")  # -1 for the heading
-        
-        if len(all_analyses) <= 1:  # Only contains the heading
+        if len(all_analyses) == 0:
             raise HTTPException(
                 status_code=500,
                 detail="No analyses were generated. Please check the prompt library and GPT service."
