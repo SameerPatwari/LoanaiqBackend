@@ -39,6 +39,7 @@ serious changes made in the operations.
 5. If there is not enough context about some insight, don't comment about it. 
 6. Don't take the projections to the face value. Have a balanced view of confidence and 
 skepticism. 
+7. Exclude any insights or analysis that reference starting values of zero. 
 Focus on definations of profit and loss and its terminologies such as revenue, expenses and tax 
 expenses and formulas given above for profit and loss account terminology and definitions while 
 generating insights. Also analyze the data given below of total revenue in tabular form and give 

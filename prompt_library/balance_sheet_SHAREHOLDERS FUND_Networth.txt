@@ -27,5 +27,6 @@ explanation of Net worth and its definition and formula given in the EXPLANATION
 5. If there is not enough context about some insight, do not comment about it. 
 6. Do not take the projections to the face value. Have a balanced view of confidence and skepticism. 
 7. You must highlight the financial risks involved as a separate bullet point
+8. Exclude any insights or analysis that reference starting values of zero.
 
 DATA:

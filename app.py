@@ -139,23 +139,50 @@ def generate_document(user_data, response_text, user_id):
         section.bottom_margin = int(Inches(0.5))
 
     # Add cover page with APPRAISAL NOTE
-    cover_heading = doc.add_heading('APPRAISAL NOTE', level=0)
+    cover_heading = doc.add_heading('APPRAISAL NOTE: PERCEPT LIMITED', level=0)
     cover_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
     cover_heading.style.font.size = Pt(20)
     cover_heading.style.font.bold = True
     
     # Add index
-    index_heading = doc.add_paragraph()
-    index_run = index_heading.add_run("\n\nINDEX")
-    index_run.bold = True
-    index_run.font.size = Pt(14)
+    index_heading = doc.add_heading('INDEX', level=1)
+    index_heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    index_heading.style.font.size = Pt(16)
     
-    # Add index entries placeholder
-    index_entries = []  # Store entries to add later
+    # Create index section
+    # Instead of creating a paragraph to hold other paragraphs, we'll add them directly to the document
+    doc.add_paragraph().paragraph_format.space_after = Pt(12)  # Add some space after heading
+
+    # Update index with hyperlinks
+    index_items = [
+        ("About the Company", 1, 'about_company'),
+        ("Analysis Of Financial Statement", 1, 'analysis'),
+        ("   Analysis of Key Ratios", 2, 'ratios_analysis'),
+        ("   Analysis of Balance Sheet", 2, 'balance_sheet_analysis'),
+        ("   Analysis of Profit & Loss", 2, 'profit_and_loss_analysis'),
+        ("Recommendations", 1, 'recommendations')
+    ]
     
+    for title, level, bookmark_id in index_items:
+        # Create paragraph directly in document
+        index_para = doc.add_paragraph()
+        index_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        index_para.paragraph_format.left_indent = Inches(0.5 if level == 2 else 0)
+        index_para.paragraph_format.space_after = Pt(6)
+        
+        # Add hyperlink
+        hyperlink = add_hyperlink(doc, index_para, title, bookmark_id)
+        hyperlink.font.size = Pt(14)
+        if level == 1:
+            hyperlink.font.bold = True
+        
+        # Add dot leaders
+        dots = index_para.add_run('.' * 50)
+        dots.font.size = Pt(14)
+
     # Add page break after index
     doc.add_page_break()
-    
+
     # Add header to all pages except cover
     header = doc.sections[0].header
     header_table = header.add_table(rows=1, cols=2, width=Inches(7.5))
@@ -227,7 +254,7 @@ def generate_document(user_data, response_text, user_id):
         if not line:
             continue
             
-        if line in ["Ratios Analysis:", "Balance Sheet Analysis:", "Profit and Loss Analysis:"]:
+        if line in ["Analysis of Key Ratios:", "Analysis of Balance Sheet:", "Analysis of Profit & Loss:"]:
             # Main heading
             section_name = line.strip(':').lower().replace(' ', '_')
             heading = doc.add_heading('', level=2)
@@ -235,14 +262,16 @@ def generate_document(user_data, response_text, user_id):
             run.font.size = Pt(14)
             run.font.bold = True
             add_bookmark(heading, section_name)
-            current_section = line.split()[0].lower()
+            # Extract the key part of the section name for table lookup
+            if "key ratios" in line.lower():
+                current_section = "ratios"
+            elif "balance sheet" in line.lower():
+                current_section = "balance_sheet"
+            elif "profit & loss" in line.lower():
+                current_section = "profit_loss"
         elif line.endswith("Table"):
             # Add appropriate table based on current section
             section_key = current_section
-            if section_key == "balance":
-                section_key = "balance_sheet"
-            elif section_key == "profit":
-                section_key = "profit_loss"
             
             if section_key in user_data:
                 print(f"Generating table for {section_key}")
@@ -273,11 +302,10 @@ def generate_document(user_data, response_text, user_id):
             
             paragraph = doc.add_paragraph()
             paragraph.style.font.size = Pt(11)
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
             
             if line.startswith("Financial Risk:"):
                 # Add bullet point
-                bullet_run = paragraph.add_run('• ')
+                bullet_run = paragraph.add_run('   • ')
                 bullet_run.font.size = Pt(11)
                 
                 # Split into label and content
@@ -297,7 +325,7 @@ def generate_document(user_data, response_text, user_id):
                     content_run.font.size = Pt(11)
             else:
                 # Add bullet point
-                bullet_run = paragraph.add_run('• ')
+                bullet_run = paragraph.add_run('   • ')
                 bullet_run.font.size = Pt(11)
                 # Add the content
                 content_run = paragraph.add_run(line)
@@ -307,7 +335,10 @@ def generate_document(user_data, response_text, user_id):
             paragraph.paragraph_format.left_indent = Inches(0.25)
             paragraph.paragraph_format.first_line_indent = Inches(-0.25)
             paragraph.paragraph_format.space_after = Pt(6)
-            paragraph.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            # Ensure all runs in the paragraph are properly aligned
+            for run in paragraph.runs:
+                run.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
     # Store last analysis if exists
     if current_analysis:
@@ -346,10 +377,11 @@ def generate_document(user_data, response_text, user_id):
         recommendations = response.choices[0].message.content.strip()
         for line in recommendations.split('\n'):
             if line.strip():
-                if line.startswith('#') or line.startswith('*'):
+                if line.startswith(('1.', '2.', '3.', '4.')):
                     # Handle headers or bullet points
                     para = doc.add_paragraph(line.lstrip('#* '))
                     para.style.font.size = Pt(11)
+                    para.runs[0].bold = True  # Make the entire header bold
                 else:
                     para = doc.add_paragraph(line)
                     para.style.font.size = Pt(11)
@@ -358,34 +390,6 @@ def generate_document(user_data, response_text, user_id):
         print(f"Error generating recommendations: {str(e)}")
         # Add error message to document
         doc.add_paragraph("Unable to generate recommendations at this time.")
-
-    # Update index with hyperlinks
-    index_items = [
-        ("About the Company", 1, 'about_company'),
-        ("Analysis Of Financial Statement", 1, 'analysis'),
-        ("Ratios Analysis", 2, 'ratios_analysis'),
-        ("Balance Sheet Analysis", 2, 'balance_sheet_analysis'),
-        ("Profit and Loss Analysis", 2, 'profit_and_loss_analysis'),
-        ("Recommendations", 2, 'recommendations')
-    ]
-    
-    for title, level, bookmark_id in index_items:
-        # Create paragraph for index entry
-        index_para = doc.add_paragraph()
-        index_para.paragraph_format.left_indent = Inches(0.5 if level == 2 else 0)
-        
-        # Add hyperlink
-        hyperlink = add_hyperlink(doc, index_para, title, bookmark_id)
-        hyperlink.font.size = Pt(11)
-        if level == 1:
-            hyperlink.font.bold = True
-        
-        # Add dot leaders
-        dots = index_para.add_run('.' * 50)
-        dots.font.size = Pt(11)
-        
-        # Add newline
-        index_para.paragraph_format.space_after = Pt(6)
 
     # Save document
     output_path = os.path.join(OUTPUT_DIR, f'analysis_{user_id}.docx')
@@ -495,6 +499,9 @@ def add_table_to_document(doc, table_name, table_data):
             for paragraph in cell.paragraphs:
                 paragraph.paragraph_format.space_before = Pt(0)
                 paragraph.paragraph_format.space_after = Pt(0)
+                # Center align figures in data cells (not the first column)
+                if cell != row.cells[0]:  # Skip first column (labels)
+                    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 for run in paragraph.runs:
                     run.font.size = Pt(8)
     
@@ -553,19 +560,19 @@ async def generate_note(request: NoteRequest):
                 'name': 'Ratios',
                 'data_key': 'ratios',
                 'prompt_prefix': 'ratios',
-                'heading': 'Ratios Analysis:'
+                'heading': 'Analysis of Key Ratios:'
             },
             {
                 'name': 'Balance Sheet',
                 'data_key': 'balance_sheet',
                 'prompt_prefix': 'balance_sheet',
-                'heading': 'Balance Sheet Analysis:'
+                'heading': 'Analysis of Balance Sheet:'
             },
             {
                 'name': 'Profit and Loss',
                 'data_key': 'profit_loss',
                 'prompt_prefix': 'profit_loss',
-                'heading': 'Statement Of Profitability Analysis:'
+                'heading': 'Analysis of Profit & Loss:'
             }
         ]
 

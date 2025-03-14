@@ -33,6 +33,7 @@ EQUITY & LIABILITIES section .
 5. If there is not enough context about some insight, don't comment about it.  
 6. Do not take the projections to the face value. Have a balanced view of confidence and skepticism.  
 7. Include specific details, such as exact dates and figures to provide a clearer picture of the financial 
-situation. 
+situation.
+8. Exclude any insights or analysis that reference starting values of zero. 
 
 DATA:
